@@ -1,0 +1,41 @@
+### Replace placeholders locally. Do not commit real tokens.
+@base = http://127.0.0.1:58091
+@writer = REPLACE_WITH_LOCAL_WRITER_TOKEN
+@reader = REPLACE_WITH_LOCAL_ALICE_TOKEN
+@freshUntil = REPLACE_WITH_NOW_PLUS_240_SECONDS
+@contextId = REPLACE_WITH_CREATED_UUID
+
+### Full source snapshot
+POST {{base}}/v1/source-events
+Authorization: Bearer {{writer}}
+Content-Type: application/json
+
+{"source_id":"example-policy","sequence":1,"content":"synthetic example only","readers":["alice"],"state":"ACTIVE","fresh_until":"{{freshUntil}}"}
+
+### Create a managed context
+POST {{base}}/v1/contexts/source
+Authorization: Bearer {{reader}}
+Content-Type: application/json
+
+{"source_id":"example-policy","ttl_seconds":300}
+
+### Register a derived context
+POST {{base}}/v1/contexts/derived
+Authorization: Bearer {{reader}}
+Content-Type: application/json
+
+{"content":"synthetic registered summary","parent_ids":["{{contextId}}"],"ttl_seconds":300}
+
+### Assemble, then repeat after revocation
+POST {{base}}/v1/contexts/assemble
+Authorization: Bearer {{reader}}
+Content-Type: application/json
+
+{"context_ids":["{{contextId}}"]}
+
+### Revoke Alice; use a new fresh_until when sending
+POST {{base}}/v1/source-events
+Authorization: Bearer {{writer}}
+Content-Type: application/json
+
+{"source_id":"example-policy","sequence":2,"content":"synthetic example only","readers":[],"state":"ACTIVE","fresh_until":"{{freshUntil}}"}

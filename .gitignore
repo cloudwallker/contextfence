@@ -1,0 +1,24 @@
+.env
+.env.*
+!.env.example
+.local/
+.cache/
+.tools/
+.superpowers/
+target/
+target-*/
+*.log
+.idea/
+.vscode/
+*.iml
+artifacts/local/
+__pycache__/
+*.pyc
+
+
+# Local planning and publication state
+/docs/superpowers/
+/docs/progress.md
+/docs/reports/review.md
+/.github-publish-work/
+/.publish/

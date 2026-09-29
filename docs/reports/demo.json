@@ -1,0 +1,759 @@
+{
+  "project": "ContextFence",
+  "recorded_at": "2026-09-29T15:53:10.189010+00:00",
+  "transport": "two independent HTTP endpoints",
+  "samples": 83,
+  "post_revoke_samples": 50,
+  "all_passed": true,
+  "cache_setup": "Two consecutive successful reads on each instance; actual hit counters are checked by integration tests.",
+  "latency_scope": "Local experiment only; includes network and database queue time, not a production benchmark.",
+  "observations": [
+    {
+      "phase": "ready",
+      "instance": "A",
+      "status": 200,
+      "code": "OK",
+      "elapsed_ms": 732.98,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "ready",
+      "instance": "B",
+      "status": 200,
+      "code": "OK",
+      "elapsed_ms": 429.06,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "seed",
+      "instance": "B",
+      "status": 200,
+      "code": "APPLIED",
+      "elapsed_ms": 221.35,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "create-source",
+      "instance": "A",
+      "status": 201,
+      "code": "OK",
+      "elapsed_ms": 129.08,
+      "expected_status": 201,
+      "passed": true
+    },
+    {
+      "phase": "derive",
+      "instance": "A",
+      "status": 201,
+      "code": "OK",
+      "elapsed_ms": 53.59,
+      "expected_status": 201,
+      "passed": true
+    },
+    {
+      "phase": "derive-again",
+      "instance": "B",
+      "status": 201,
+      "code": "OK",
+      "elapsed_ms": 63.06,
+      "expected_status": 201,
+      "passed": true
+    },
+    {
+      "phase": "warm",
+      "instance": "A",
+      "status": 200,
+      "code": "ALLOWED",
+      "elapsed_ms": 65.27,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "warm",
+      "instance": "A",
+      "status": 200,
+      "code": "ALLOWED",
+      "elapsed_ms": 23.85,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "warm",
+      "instance": "B",
+      "status": 200,
+      "code": "ALLOWED",
+      "elapsed_ms": 62.45,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "warm",
+      "instance": "B",
+      "status": 200,
+      "code": "ALLOWED",
+      "elapsed_ms": 23.38,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "revoke-confirmed",
+      "instance": "B",
+      "status": 200,
+      "code": "APPLIED",
+      "elapsed_ms": 42.92,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 51.62,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 60.33,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 71.13,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 83.35,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 88.18,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 109.04,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 112.37,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 112.7,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 108.95,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 112.63,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 112.13,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 122.29,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 120.56,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 111.99,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 124.5,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 114.28,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 123.36,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 141.47,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 137.33,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 138.59,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 140.99,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 147.55,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 156.56,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 168.26,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 190.95,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 187.53,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 187.71,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 178.29,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 182.47,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 197.68,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 195.12,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 196.65,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 202.26,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 202.82,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 197.64,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 198.43,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 199.55,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 206.53,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 217.29,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 230.08,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 219.25,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 232.85,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 235.16,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 221.03,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 235.51,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 237.37,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 235.78,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 256.03,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "B",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 246.39,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "after-revoke",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 253.16,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "replay-old",
+      "instance": "B",
+      "status": 200,
+      "code": "APPLIED",
+      "elapsed_ms": 27.13,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "old-replay-still-denied",
+      "instance": "A",
+      "status": 403,
+      "code": "SOURCE_ACCESS_DENIED",
+      "elapsed_ms": 24.52,
+      "expected_status": 403,
+      "passed": true
+    },
+    {
+      "phase": "denial-receipt",
+      "instance": "A",
+      "status": 200,
+      "code": "OK",
+      "elapsed_ms": 22.18,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "sequence-conflict",
+      "instance": "B",
+      "status": 409,
+      "code": "EVENT_CONFLICT",
+      "elapsed_ms": 40.88,
+      "expected_status": 409,
+      "passed": true
+    },
+    {
+      "phase": "regrant",
+      "instance": "B",
+      "status": 200,
+      "code": "APPLIED",
+      "elapsed_ms": 16.0,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "old-epoch",
+      "instance": "A",
+      "status": 409,
+      "code": "CONTEXT_STALE",
+      "elapsed_ms": 20.37,
+      "expected_status": 409,
+      "passed": true
+    },
+    {
+      "phase": "new-epoch",
+      "instance": "A",
+      "status": 201,
+      "code": "OK",
+      "elapsed_ms": 38.59,
+      "expected_status": 201,
+      "passed": true
+    },
+    {
+      "phase": "new-derived",
+      "instance": "A",
+      "status": 201,
+      "code": "OK",
+      "elapsed_ms": 40.46,
+      "expected_status": 201,
+      "passed": true
+    },
+    {
+      "phase": "new-context-readable",
+      "instance": "A",
+      "status": 200,
+      "code": "ALLOWED",
+      "elapsed_ms": 21.1,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "content-update",
+      "instance": "B",
+      "status": 200,
+      "code": "APPLIED",
+      "elapsed_ms": 14.95,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "descendants-stale",
+      "instance": "A",
+      "status": 409,
+      "code": "CONTEXT_STALE",
+      "elapsed_ms": 18.14,
+      "expected_status": 409,
+      "passed": true
+    },
+    {
+      "phase": "delete",
+      "instance": "B",
+      "status": 200,
+      "code": "APPLIED",
+      "elapsed_ms": 18.99,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "deleted-context",
+      "instance": "A",
+      "status": 410,
+      "code": "SOURCE_DELETED",
+      "elapsed_ms": 18.52,
+      "expected_status": 410,
+      "passed": true
+    },
+    {
+      "phase": "cross-tenant",
+      "instance": "B",
+      "status": 404,
+      "code": "NOT_FOUND",
+      "elapsed_ms": 16.91,
+      "expected_status": 404,
+      "passed": true
+    },
+    {
+      "phase": "forged-identity",
+      "instance": "A",
+      "status": 400,
+      "code": "INVALID_JSON",
+      "elapsed_ms": 29.23,
+      "expected_status": 400,
+      "passed": true
+    },
+    {
+      "phase": "fresh-seed",
+      "instance": "B",
+      "status": 200,
+      "code": "APPLIED",
+      "elapsed_ms": 30.44,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "fresh-context",
+      "instance": "A",
+      "status": 201,
+      "code": "OK",
+      "elapsed_ms": 18.89,
+      "expected_status": 201,
+      "passed": true
+    },
+    {
+      "phase": "freshness-expired",
+      "instance": "B",
+      "status": 200,
+      "code": "APPLIED",
+      "elapsed_ms": 21.95,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "unverified-blocked",
+      "instance": "A",
+      "status": 503,
+      "code": "SOURCE_UNVERIFIED",
+      "elapsed_ms": 18.59,
+      "expected_status": 503,
+      "passed": true
+    },
+    {
+      "phase": "renew",
+      "instance": "B",
+      "status": 200,
+      "code": "APPLIED",
+      "elapsed_ms": 35.88,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "renew-same-context",
+      "instance": "A",
+      "status": 200,
+      "code": "ALLOWED",
+      "elapsed_ms": 22.07,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "phase": "all-or-nothing",
+      "instance": "A",
+      "status": 410,
+      "code": "SOURCE_DELETED",
+      "elapsed_ms": 36.14,
+      "expected_status": 410,
+      "passed": true
+    }
+  ]
+}

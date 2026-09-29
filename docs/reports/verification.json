@@ -1,0 +1,93 @@
+{
+  "recorded_at": "2026-09-29T15:57:44.737143+00:00",
+  "source": "JUnit XML counts from Maven verify; no environment properties or log text exported",
+  "suites": [
+    {
+      "kind": "unit",
+      "suite": "io.contextfence.common.JsonTest",
+      "seconds": 0.96,
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "kind": "unit",
+      "suite": "io.contextfence.identity.BodySizeFilterTest",
+      "seconds": 0.334,
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "kind": "unit",
+      "suite": "io.contextfence.identity.IdentityStoreTest",
+      "seconds": 0.196,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "kind": "unit",
+      "suite": "io.contextfence.identity.SecurityBoundaryTest",
+      "seconds": 6.567,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "kind": "integration",
+      "suite": "io.contextfence.ConcurrencyIT",
+      "seconds": 41.485,
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "kind": "integration",
+      "suite": "io.contextfence.ContextIT",
+      "seconds": 2.259,
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "kind": "integration",
+      "suite": "io.contextfence.DatabaseOutageIT",
+      "seconds": 13.58,
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "kind": "integration",
+      "suite": "io.contextfence.HttpIT",
+      "seconds": 2.318,
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "kind": "integration",
+      "suite": "io.contextfence.SourceIT",
+      "seconds": 0.143,
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "totals": {
+    "tests": 39,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

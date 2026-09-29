@@ -1,0 +1,57 @@
+name: contextfence
+
+x-api: &api
+  image: contextfence:local
+  build:
+    context: .
+    dockerfile: Dockerfile
+  environment:
+    CONTEXTFENCE_DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-contextfence}
+    CONTEXTFENCE_DATABASE_USER: ${POSTGRES_USER:-contextfence}
+    CONTEXTFENCE_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/bootstrap.py before starting the project}
+    CONTEXTFENCE_IDENTITIES_FILE: /data/identities.json
+    SERVER_PORT: "8080"
+  volumes:
+    - type: bind
+      source: ./.local/identities.json
+      target: /data/identities.json
+      read_only: true
+      bind:
+        create_host_path: false
+  depends_on:
+    postgres:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "curl", "--fail", "--silent", "--max-time", "3", "http://127.0.0.1:8080/health/ready"]
+    interval: 5s
+    timeout: 4s
+    retries: 24
+    start_period: 20s
+
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-contextfence}
+      POSTGRES_USER: ${POSTGRES_USER:-contextfence}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/bootstrap.py before starting the project}
+    ports:
+      - "127.0.0.1:${PG_PORT:-55448}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  api-a:
+    <<: *api
+    ports:
+      - "127.0.0.1:${API_A_PORT:-58091}:8080"
+  api-b:
+    <<: *api
+    ports:
+      - "127.0.0.1:${API_B_PORT:-58092}:8080"
+
+volumes:
+  postgres-data:

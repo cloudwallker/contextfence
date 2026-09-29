@@ -1,0 +1,41 @@
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+    whitelabel:
+      enabled: false
+
+spring:
+  application:
+    name: context-fence
+  autoconfigure:
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+  datasource:
+    url: ${CONTEXTFENCE_DATABASE_URL:jdbc:postgresql://localhost:5432/contextfence}
+    username: ${CONTEXTFENCE_DATABASE_USER:contextfence}
+    password: ${CONTEXTFENCE_DATABASE_PASSWORD:}
+    hikari:
+      maximum-pool-size: 16
+      minimum-idle: 2
+      connection-timeout: 2000
+      data-source-properties:
+        socketTimeout: 3
+        ApplicationName: context-fence
+  flyway:
+    validate-on-migrate: true
+    clean-disabled: true
+  mvc:
+    log-request-details: false
+  web:
+    resources:
+      add-mappings: false
+
+logging:
+  level:
+    org.springframework.jdbc.core: OFF
+    org.springframework.web: ERROR
+    org.springframework.security: WARN
+    com.zaxxer.hikari: WARN
