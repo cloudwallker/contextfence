@@ -12,6 +12,8 @@ English | [中文](README_ZH.md)
 
 *Architecture diagram: source updates and context retrieval share a PostgreSQL lock boundary. This is a flow illustration, not a runtime screenshot.*
 
+![contextfence](docs/images/cartoon-infographic.png)
+
 Alice reads a pricing policy and a trusted producer registers a summary derived from it. Instance A caches that summary. An administrator revokes Alice through instance B. Once the revocation is acknowledged, a new retrieval through either instance rejects the summary. Regranting access does not revive old context: its authorization epoch is stale.
 
 ## Features
