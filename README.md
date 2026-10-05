@@ -1,6 +1,6 @@
 # ContextFence
 
-### A Java backend for context validity before agent use
+### Permission-aware context delivery for agent backends
 
 **Keep managed context and its registered derivatives tied to current permissions, source versions, and expiry. Recheck every retrieval, even when another service instance already holds the body in cache.**
 
@@ -10,11 +10,11 @@ English | [中文](README_ZH.md)
 
 ![ContextFence checks current source state under a shared database lock before retrieving immutable cached bodies; source updates use an exclusive lock.](docs/images/contextfence-overview.svg)
 
-*Architecture diagram: source updates and context retrieval share a PostgreSQL lock boundary. This is a flow illustration, not a runtime screenshot.*
+*Architecture diagram: source updates and context retrieval share a PostgreSQL lock boundary.*
 
 ![contextfence](docs/images/cartoon-infographic.png)
 
-*Concept illustration: the cartoon explains context invalidation; it is not a screenshot of the running stack.*
+*Concept illustration of context invalidation.*
 
 Alice reads a pricing policy and a trusted producer registers a summary derived from it. Instance A caches that summary. An administrator revokes Alice through instance B. Once the revocation is acknowledged, a new retrieval through either instance rejects the summary. Regranting access does not revive old context: its authorization epoch is stale.
 
@@ -27,7 +27,7 @@ Alice reads a pricing policy and a trusted producer registers a summary derived 
 - **All-or-nothing results:** a mixed valid/invalid batch returns no bodies. Decision receipts contain metadata and reasons, without source bodies or credentials.
 - **Local operating stack:** HAProxy fronts both API instances; Prometheus, Grafana, Alertmanager, and PostgreSQL/host exporters provide local monitoring. Startup and recovery open ingress after safety checks; deployment verifies each candidate before returning it to traffic, and backup verifies snapshots before publication.
 
-The project includes HTTP APIs, synthetic fixtures, two-instance scripts, and failure experiments. It does not require a model API key. There is no model invocation, chat UI, agent loop, or vector search.
+The HTTP API manages context supplied by trusted producers. Synthetic fixtures, two-instance scripts, and failure experiments exercise the retrieval workflow locally without a model API key.
 
 ## Quick Start
 
