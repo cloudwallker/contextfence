@@ -64,6 +64,16 @@ class SecurityBoundaryTest {
                 .andExpect(content().json("{\"code\":\"REQUEST_TOO_LARGE\"}"));
     }
 
+    @Test void permitsOnlyAuthenticatedGetPrometheusAndDeniesOtherManagementRoutes() throws Exception {
+        mvc.perform(get("/actuator/prometheus")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/actuator/prometheus").header("Authorization", "Bearer " + IdentityStoreTest.TOKEN))
+                .andExpect(status().isOk());
+        mvc.perform(post("/actuator/prometheus").header("Authorization", "Bearer " + IdentityStoreTest.TOKEN))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/actuator/env").header("Authorization", "Bearer " + IdentityStoreTest.TOKEN))
+                .andExpect(status().isForbidden());
+    }
+
     @Configuration @EnableWebMvc
     static class TestConfiguration {
         @Bean IdentityStore identities() { return IdentityStore.fromJson(IdentityStoreTest.VALID); }
@@ -71,6 +81,9 @@ class SecurityBoundaryTest {
     }
     @RestController
     static class TestController {
+        @GetMapping("/actuator/prometheus") String metrics() { return "metrics"; }
+        @PostMapping("/actuator/prometheus") String unsupportedMetrics() { return "unsupported"; }
+        @GetMapping("/actuator/env") String environment() { return "private"; }
         @GetMapping({"/health/live", "/health/ready"}) String health() { return "ok"; }
         @GetMapping("/protected") String caller(Authentication auth) {
             Caller caller = (Caller) auth.getPrincipal();

@@ -22,13 +22,15 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/health/live", "/health/ready").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/prometheus").authenticated()
+                        .requestMatchers("/actuator", "/actuator/**").denyAll()
                         .requestMatchers(HttpMethod.POST, "/v1/source-events").hasRole("SOURCE_WRITER")
                         .requestMatchers(HttpMethod.POST, "/v1/contexts/derived").hasRole("PRODUCER")
                         .requestMatchers(HttpMethod.POST, "/v1/contexts/source", "/v1/contexts/assemble").hasAnyRole("READER", "PRODUCER")
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
-                        .authenticationEntryPoint((request, response, failure) -> SecurityResponses.write(response, 401, "UNAUTHENTICATED"))
-                        .accessDeniedHandler((request, response, failure) -> SecurityResponses.write(response, 403, "FORBIDDEN")))
+                        .authenticationEntryPoint((request, response, failure) -> SecurityResponses.write(request, response, 401, "UNAUTHENTICATED"))
+                        .accessDeniedHandler((request, response, failure) -> SecurityResponses.write(request, response, 403, "FORBIDDEN")))
                 .addFilterBefore(bearer, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new BodySizeFilter(), BearerIdentityFilter.class);
         return http.build();

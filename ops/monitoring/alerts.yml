@@ -1,0 +1,54 @@
+groups:
+  - name: contextfence
+    rules:
+      - alert: ApiUnavailable
+        expr: (up{job="contextfence"} == 0) or (contextfence_ready == 0)
+        for: 30s
+        labels: {severity: critical}
+        annotations: {summary: "API readiness or authenticated scrape failed", runbook: "docs/operations/runbook.md#api-unavailable"}
+      - alert: ServerFailureRate
+        expr: (sum(increase(http_server_requests_seconds_count{job="contextfence",uri=~"/v1/.*",status=~"5.."}[2m])) / clamp_min(sum(increase(http_server_requests_seconds_count{job="contextfence",uri=~"/v1/.*"}[2m])), 1) > 0.01) and (sum(increase(http_server_requests_seconds_count{job="contextfence",uri=~"/v1/.*"}[2m])) >= 100)
+        labels: {severity: critical}
+        annotations: {summary: "Server 5xx failures exceed one percent", runbook: "docs/operations/runbook.md#unexpected-failures"}
+      - alert: LoadUnexpectedFailureRate
+        expr: (sum(increase(contextfence_load_unexpected_total[2m])) / clamp_min(sum(increase(contextfence_load_requests_total[2m])), 1) > 0.01) and (sum(increase(contextfence_load_requests_total[2m])) >= 100)
+        labels: {severity: critical}
+        annotations: {summary: "Verified load-client unexpected failures exceed one percent", runbook: "docs/operations/capacity-method.md#客户端结果告警"}
+      - alert: LoadUnsafeAllow
+        expr: sum(increase(contextfence_load_unsafe_allow_total[2m])) > 0
+        labels: {severity: critical}
+        annotations: {summary: "Load-client fixture detected unsafe content admission", runbook: "docs/operations/capacity-method.md#客户端结果告警"}
+      - alert: TailLatencyRegression
+        # A capacity run freezes the threshold in the node-exporter textfile; no invented baseline.
+        expr: histogram_quantile(0.99, sum by(le) (rate(http_server_requests_seconds_bucket{job="contextfence",uri=~"/v1/.*"}[2m]))) > on() group_left contextfence_capacity_p99_threshold_seconds
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "Observed p99 exceeds the frozen capacity threshold", runbook: "docs/operations/runbook.md#latency"}
+      - alert: DatabasePoolWaiting
+        expr: hikaricp_connections_pending{job="contextfence"} > 0
+        for: 30s
+        labels: {severity: warning}
+        annotations: {summary: "Database pool has persistent waiters", runbook: "docs/operations/runbook.md#database-pool"}
+      - alert: DatabasePoolTimeout
+        expr: increase(hikaricp_connections_timeout_total{job="contextfence"}[2m]) > 0
+        labels: {severity: critical}
+        annotations: {summary: "Database connection acquisition timed out", runbook: "docs/operations/runbook.md#database-pool"}
+      - alert: DatabaseUnavailable
+        expr: pg_up == 0 or up{job="postgres"} == 0
+        for: 15s
+        labels: {severity: critical}
+        annotations: {summary: "Database or monitor connection unavailable", runbook: "docs/operations/runbook.md#database-unavailable"}
+      - alert: BackupFailed
+        expr: contextfence_backup_last_attempt_success == 0
+        labels: {severity: critical}
+        annotations: {summary: "Last backup attempt failed", runbook: "docs/operations/runbook.md#backup"}
+      - alert: BackupExpired
+        expr: (time() - contextfence_backup_snapshot_timestamp_seconds > 4200) or absent(contextfence_backup_snapshot_timestamp_seconds)
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "No successful snapshot within seventy minutes", runbook: "docs/operations/runbook.md#backup"}
+      - alert: HostDiskLow
+        expr: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"} < 0.20
+        for: 2m
+        labels: {severity: warning}
+        annotations: {summary: "Host filesystem has less than twenty percent free", runbook: "docs/operations/runbook.md#disk"}

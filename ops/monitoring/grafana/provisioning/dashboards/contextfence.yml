@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: ContextFence
+    orgId: 1
+    folder: ContextFence
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards

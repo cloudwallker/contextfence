@@ -1,0 +1,6 @@
+contextfence_pg:
+  query: "SELECT count(*) FILTER (WHERE wait_event_type='Lock') AS lock_waiters, count(*) FILTER (WHERE state='active') AS active_connections, coalesce(max(extract(epoch FROM clock_timestamp()-xact_start)) FILTER (WHERE state='active'),0) AS oldest_active_transaction_seconds FROM pg_stat_activity WHERE datname=current_database()"
+  metrics:
+    - lock_waiters: {usage: GAUGE, description: "Database sessions waiting for a lock"}
+    - active_connections: {usage: GAUGE, description: "Active sessions in the application database"}
+    - oldest_active_transaction_seconds: {usage: GAUGE, description: "Age of the oldest active transaction"}

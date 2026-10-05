@@ -27,19 +27,14 @@ class EntrypointTests(unittest.TestCase):
         self.fake_bin.mkdir()
         self.record = Path(self.directory.name) / "docker-calls.jsonl"
         docker_double = self.fake_bin / "docker-double.py"
-        docker_double.write_text(
-            "import json, os, sys\n"
-            "with open(os.environ['DOCKER_CALL_RECORD'], 'a') as f:\n"
-            "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
-            "if 'up' in sys.argv or 'down' in sys.argv:\n"
-            "    code = int(os.environ.get('DOCKER_MUTATION_EXIT', '0'))\n"
-            "    if code: print('controlled Docker failure', file=sys.stderr)\n"
-            "    sys.exit(code)\n"
-        )
+        docker_double.write_text((SCRIPTS / 'tests/fake_docker.py').read_text())
         (self.fake_bin / "docker.cmd").write_text(f'@"{sys.executable}" "{docker_double}" %*\n')
         self.environment = dict(os.environ)
         self.environment["PATH"] = str(self.fake_bin) + os.pathsep + self.environment.get("PATH", "")
         self.environment["DOCKER_CALL_RECORD"] = str(self.record)
+        # Use an existing synthetic content identity so CLI tests never fetch
+        # the official 189 MB package or talk to a real registry.
+        self.environment["GRAFANA_IMAGE"] = 'sha256:' + 'a' * 64
 
     def invoke(self, script, *arguments):
         return subprocess.run(
@@ -57,20 +52,30 @@ class EntrypointTests(unittest.TestCase):
         self.assertTrue((self.root / ".env").is_file())
         self.assertTrue((self.root / ".local/identities.json").is_file())
         mutations = [call for call in self.calls() if "up" in call or "down" in call]
-        self.assertEqual(1, len(mutations))
+        self.assertEqual(2, len(mutations))
         call = mutations[0]
         self.assertEqual("contextfence", call[call.index("--project-name") + 1])
         self.assertEqual(str(self.root / "compose.yaml"), call[call.index("--file") + 1])
         self.assertEqual(str(self.root / ".env"), call[call.index("--env-file") + 1])
         self.assertIn("--wait", call)
-        self.assertIn("--build", call)
+        self.assertIn("postgres", call)
+        self.assertTrue(any('build' in item for item in self.calls()))
+        self.assertTrue(any('migrate' in item for item in self.calls()))
+        self.assertEqual('sha256:' + 'a' * 64,
+                         next(line.split('=', 1)[1] for line in
+                              (self.root / '.local/runtime/images.env').read_text().splitlines()
+                              if line.startswith('GRAFANA_IMAGE=')))
+        self.assertIn(['image', 'inspect', 'sha256:' + 'a' * 64], self.calls())
+        self.assertEqual('OPEN', json.loads((self.root / '.local/runtime/proxy-gate.json').read_text())['state'])
         self.assertNotIn("down", call)
 
-    def test_start_preserves_docker_failure_and_exits_nonzero(self):
+    def test_start_preserves_closed_ingress_and_hides_private_docker_failure(self):
         self.environment["DOCKER_MUTATION_EXIT"] = "7"
         result = self.invoke("start.ps1")
-        self.assertEqual(7, result.returncode)
-        self.assertIn("controlled Docker failure", result.stderr)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("Startup failed", result.stderr)
+        self.assertNotIn("controlled Docker failure", result.stdout + result.stderr)
+        self.assertEqual('CLOSED', json.loads((self.root / '.local/runtime/proxy-gate.json').read_text())['state'])
         self.assertFalse(any("down" in call for call in self.calls()))
 
     def test_incomplete_config_prevents_any_docker_up(self):
@@ -81,16 +86,25 @@ class EntrypointTests(unittest.TestCase):
         self.assertFalse(any("up" in call for call in self.calls()))
         self.assertNotIn("existing-secret-marker", result.stdout + result.stderr)
 
+    def test_mutable_grafana_image_stops_before_up_with_fixed_configuration_error(self):
+        marker = 'private-registry-marker/grafana:latest'
+        self.environment['GRAFANA_IMAGE'] = marker
+        result = self.invoke('start.ps1')
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('Grafana image must be an existing content digest', result.stderr)
+        self.assertNotIn(marker, result.stdout + result.stderr)
+        self.assertEqual('CLOSED', json.loads((self.root / '.local/runtime/proxy-gate.json').read_text())['state'])
+        self.assertFalse(any('up' in call for call in self.calls()))
+
     def test_stop_scopes_down_without_deleting_volume_or_credentials(self):
         (self.root / ".env").write_text("POSTGRES_PASSWORD=existing-secret-marker\n")
         result = self.invoke("stop.ps1")
         self.assertEqual(0, result.returncode, result.stderr)
         calls = self.calls()
-        self.assertEqual(1, len(calls))
-        self.assertEqual("contextfence", calls[0][calls[0].index("--project-name") + 1])
-        self.assertIn("down", calls[0])
-        self.assertNotIn("--volumes", calls[0])
-        self.assertNotIn("-v", calls[0])
+        down = next(call for call in calls if 'down' in call)
+        self.assertEqual("contextfence", down[down.index("--project-name") + 1])
+        self.assertNotIn("--volumes", down)
+        self.assertNotIn("-v", down)
         self.assertTrue((self.root / ".env").is_file())
 
     def test_maven_uses_java21_and_explicit_settings_and_preserves_exit(self):

@@ -4,3 +4,8 @@
 !pom.xml
 !src/
 !src/**
+!ops/
+!ops/**
+!scripts/
+!scripts/alert_receiver.py
+!scripts/db_fault_proxy.py

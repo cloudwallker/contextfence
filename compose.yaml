@@ -1,28 +1,33 @@
 name: contextfence
 
+x-log: &log
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 x-api: &api
-  image: contextfence:local
-  build:
-    context: .
-    dockerfile: Dockerfile
-  environment:
-    CONTEXTFENCE_DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-contextfence}
-    CONTEXTFENCE_DATABASE_USER: ${POSTGRES_USER:-contextfence}
-    CONTEXTFENCE_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/bootstrap.py before starting the project}
+  init: true
+  restart: unless-stopped
+  cpus: 0.75
+  mem_limit: 1g
+  environment: &api-env
+    CONTEXTFENCE_DATABASE_URL: jdbc:postgresql://${DB_HOST:-postgres}:5432/${POSTGRES_DB:-contextfence}
+    CONTEXTFENCE_DATABASE_USER: cf_runtime
+    CONTEXTFENCE_DATABASE_PASSWORD_FILE: /run/secrets/db-runtime
     CONTEXTFENCE_IDENTITIES_FILE: /data/identities.json
+    CONTEXTFENCE_GATE_FILE: /runtime/app-gate.json
+    SPRING_FLYWAY_ENABLED: "false"
+    JAVA_TOOL_OPTIONS: "-Xms256m -Xmx512m -XX:+ExitOnOutOfMemoryError"
     SERVER_PORT: "8080"
+  secrets: [db-runtime]
   volumes:
-    - type: bind
-      source: ./.local/identities.json
-      target: /data/identities.json
-      read_only: true
-      bind:
-        create_host_path: false
-  depends_on:
-    postgres:
-      condition: service_healthy
+    - ./.local/identities.json:/data/identities.json:ro
+    - ./.local/runtime:/runtime:ro
+  networks: [backend]
+  logging: *log
   healthcheck:
-    test: ["CMD", "curl", "--fail", "--silent", "--max-time", "3", "http://127.0.0.1:8080/health/ready"]
+    test: [CMD, curl, --fail, --silent, --max-time, "3", "http://127.0.0.1:8080/health/ready"]
     interval: 5s
     timeout: 4s
     retries: 24
@@ -30,28 +35,255 @@ x-api: &api
 
 services:
   postgres:
-    image: postgres:17.11-alpine
+    image: ${POSTGRES_IMAGE:-public.ecr.aws/docker/library/postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24}
+    restart: unless-stopped
+    cpus: 1.0
+    mem_limit: 2g
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-contextfence}
-      POSTGRES_USER: ${POSTGRES_USER:-contextfence}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/bootstrap.py before starting the project}
-    ports:
-      - "127.0.0.1:${PG_PORT:-55448}:5432"
+      POSTGRES_USER: cf_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-admin
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    command: [postgres, -c, max_connections=80, -c, shared_buffers=512MB, -c, log_statement=none, -c, log_min_error_statement=panic]
+    secrets: [db-admin, db-migration, db-runtime, db-backup, db-monitor]
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./ops/postgres:/ops:ro
+      - ./ops/postgres/init.sh:/docker-entrypoint-initdb.d/10-contextfence.sh:ro
+    networks: [backend]
+    logging: *log
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      test: [CMD-SHELL, "pg_isready -U cf_admin -d \"$${POSTGRES_DB}\""]
       interval: 3s
       timeout: 3s
       retries: 20
+
   api-a:
     <<: *api
-    ports:
-      - "127.0.0.1:${API_A_PORT:-58091}:8080"
+    image: ${API_A_IMAGE:-contextfence:local}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven@sha256:3a4ab3276a087bf276f79cae96b1af04f53731bec53fb2e651aca79e4b10211e}
+        JAVA_RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin@sha256:f04fb34e053148344e83317976114ec3f37e4b830ec8bdab5a2fe3cecd7d010b}
+    environment:
+      <<: *api-env
+      CONTEXTFENCE_INSTANCE: api-a
+      CONTEXTFENCE_VERSION: ${API_A_VERSION:-0.1.0}
   api-b:
     <<: *api
-    ports:
-      - "127.0.0.1:${API_B_PORT:-58092}:8080"
+    image: ${API_B_IMAGE:-contextfence:local}
+    pull_policy: never
+    environment:
+      <<: *api-env
+      CONTEXTFENCE_INSTANCE: api-b
+      CONTEXTFENCE_VERSION: ${API_B_VERSION:-0.1.0}
+
+  migrate:
+    image: ${MIGRATION_IMAGE:-contextfence:local}
+    pull_policy: never
+    profiles: [tools]
+    restart: "no"
+    command: [--migrate-only]
+    environment:
+      CONTEXTFENCE_DATABASE_URL: jdbc:postgresql://${DB_HOST:-postgres}:5432/${POSTGRES_DB:-contextfence}
+      CONTEXTFENCE_DATABASE_USER: cf_migration
+      CONTEXTFENCE_DATABASE_PASSWORD_FILE: /run/secrets/db-migration
+      CONTEXTFENCE_IDENTITIES_FILE: /data/identities.json
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
+    secrets: [db-migration]
+    volumes:
+      - ./.local/identities.json:/data/identities.json:ro
+      - ./.local/runtime:/runtime:ro
+    networks: [backend]
+    logging: *log
+
+  proxy:
+    image: contextfence-proxy:local
+    build:
+      context: .
+      dockerfile: ops/proxy/Dockerfile
+      args:
+        HAPROXY_IMAGE: ${HAPROXY_IMAGE:-public.ecr.aws/docker/library/haproxy@sha256:3a819392f5a6af2a9203d1c63ff0feba74f0c940623a558511be06d7d85e361c}
+    restart: unless-stopped
+    cpus: 0.15
+    mem_limit: 128m
+    ports: ["127.0.0.1:${ENTRY_PORT:-58090}:8080"]
+    volumes:
+      - ./ops/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./ops/proxy/gate.lua:/usr/local/etc/haproxy/gate.lua:ro
+      - ./.local/runtime:/runtime:ro
+    networks: [backend]
+    logging: *log
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, "http://127.0.0.1:8404/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-quay.io/prometheus/prometheus@sha256:76947e7ef22f8a698fc638f706685909be425dbe09bd7a2cd7aca849f79b5f64}
+    restart: unless-stopped
+    cpus: 0.30
+    mem_limit: 512m
+    command: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.retention.time=7d, --storage.tsdb.retention.size=1GB]
+    ports: ["127.0.0.1:${PROMETHEUS_PORT:-59090}:9090"]
+    volumes:
+      - ./ops/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./.local/runtime:/runtime:ro
+      - prometheus-data:/prometheus
+    networks: [backend]
+    logging: *log
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, "http://127.0.0.1:9090/-/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  grafana:
+    image: ${GRAFANA_IMAGE:-contextfence-grafana:12.2.0-official-archive}
+    restart: unless-stopped
+    cpus: 0.20
+    mem_limit: 256m
+    environment:
+      GF_SECURITY_ADMIN_USER: operator
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    secrets: [grafana-admin]
+    ports: ["127.0.0.1:${GRAFANA_PORT:-53000}:3000"]
+    volumes:
+      - ./ops/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks: [backend]
+    logging: *log
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, "http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  alertmanager:
+    image: ${ALERTMANAGER_IMAGE:-quay.io/prometheus/alertmanager@sha256:27c475db5fb156cab31d5c18a4251ac7ed567746a2483ff264516437a39b15ba}
+    restart: unless-stopped
+    cpus: 0.10
+    mem_limit: 64m
+    command: [--config.file=/etc/alertmanager/alertmanager.yml, --storage.path=/alertmanager]
+    volumes:
+      - ./ops/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    networks: [backend]
+    logging: *log
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, "http://127.0.0.1:9093/-/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  alert-receiver:
+    image: contextfence-alerts:local
+    build:
+      context: .
+      dockerfile: ops/monitoring/alert-receiver.Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-public.ecr.aws/docker/library/python@sha256:9ba6d8cbebf0fb6546ae71f2a1c14f6ffd2fdab83af7fa5669734ef30ad48844}
+    restart: unless-stopped
+    cpus: 0.05
+    mem_limit: 48m
+    volumes: ["./.local/alerts:/data"]
+    networks: [backend]
+    logging: *log
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8088/health',timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  postgres-exporter:
+    image: ${POSTGRES_EXPORTER_IMAGE:-quay.io/prometheuscommunity/postgres-exporter@sha256:fb96c4413985d4b23ab02b19022b3d70a86c8e0a62f41ab15ebb6f4673781a5d}
+    restart: unless-stopped
+    cpus: 0.10
+    mem_limit: 96m
+    environment:
+      DATA_SOURCE_URI: ${DB_HOST:-postgres}:5432/${POSTGRES_DB:-contextfence}?sslmode=disable
+      DATA_SOURCE_USER: cf_monitor
+      DATA_SOURCE_PASS_FILE: /run/secrets/db-monitor
+      PG_EXPORTER_EXTEND_QUERY_PATH: /etc/postgres-exporter/queries.yml
+    secrets: [db-monitor]
+    volumes: ["./ops/monitoring/postgres-queries.yml:/etc/postgres-exporter/queries.yml:ro"]
+    networks: [backend]
+    logging: *log
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, "http://127.0.0.1:9187/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  node-exporter:
+    image: ${NODE_EXPORTER_IMAGE:-quay.io/prometheus/node-exporter@sha256:d00a542e409ee618a4edc67da14dd48c5da66726bbd5537ab2af9c1dfc442c8a}
+    restart: unless-stopped
+    cpus: 0.10
+    mem_limit: 96m
+    pid: host
+    command: [--path.rootfs=/host, --collector.textfile.directory=/textfile, --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+)($$|/)]
+    volumes:
+      - /:/host:ro
+      - ./.local/metrics:/textfile:ro
+    networks: [backend]
+    logging: *log
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, "http://127.0.0.1:9100/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  grafana-build:
+    image: contextfence-grafana:12.2.0-official-archive
+    profiles: [tools]
+    build:
+      context: .
+      dockerfile: ops/monitoring/grafana.Dockerfile
+      additional_contexts:
+        grafana_archive: ./.tools/grafana
+
+  db-fault-proxy:
+    image: contextfence-db-fault-proxy:local
+    profiles: [tools]
+    build:
+      context: .
+      dockerfile: ops/db-fault-proxy/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-public.ecr.aws/docker/library/python@sha256:9ba6d8cbebf0fb6546ae71f2a1c14f6ffd2fdab83af7fa5669734ef30ad48844}
+    environment:
+      DB_FAULT_TARGET_HOST: ${DB_FAULT_TARGET_HOST:-postgres}
+    networks: [backend]
+    cpus: 0.25
+    mem_limit: 64m
+    logging: *log
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request;urllib.request.urlopen('http://127.0.0.1:18888/health',timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+networks:
+  backend:
+    driver: bridge
 
 volumes:
   postgres-data:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:
+
+secrets:
+  db-admin: {file: ./.local/secrets/db-admin}
+  db-migration: {file: ./.local/secrets/db-migration}
+  db-runtime: {file: ./.local/secrets/db-runtime}
+  db-backup: {file: ./.local/secrets/db-backup}
+  db-monitor: {file: ./.local/secrets/db-monitor}
+  grafana-admin: {file: ./.local/secrets/grafana-admin}

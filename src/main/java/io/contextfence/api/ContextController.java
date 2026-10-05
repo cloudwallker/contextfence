@@ -6,6 +6,8 @@ import io.contextfence.audit.ReceiptService;
 import io.contextfence.common.Json;
 import io.contextfence.context.ContextService;
 import io.contextfence.identity.Caller;
+import io.contextfence.observability.RequestOutcome;
+import jakarta.servlet.http.HttpServletRequest;
 import io.contextfence.sources.SourceService;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -43,8 +45,9 @@ public class ContextController {
     }
 
     @PostMapping(value = "/contexts/assemble", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> assemble(@AuthenticationPrincipal Caller caller, @RequestBody String body) {
+    public ResponseEntity<String> assemble(@AuthenticationPrincipal Caller caller, @RequestBody String body, HttpServletRequest request) {
         AdmissionDecision decision = admission.assemble(caller, Json.read(body, AssembleRequest.class));
+        RequestOutcome.mark(request, decision.code());
         return json(decision.status(), decision);
     }
 

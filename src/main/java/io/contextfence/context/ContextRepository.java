@@ -13,7 +13,11 @@ import java.util.*;
 /** Called only inside the tenant guard transaction. Metadata queries exclude body text. */
 public final class ContextRepository {
     public record Item(UUID id, String kind, Instant expiresAt, int depth, String hash,
-                       int bytes, List<SourceVersion> sources) {}
+                       int bytes, List<SourceVersion> sources, boolean retired) {
+        public Item(UUID id, String kind, Instant expiresAt, int depth, String hash, int bytes, List<SourceVersion> sources) {
+            this(id, kind, expiresAt, depth, hash, bytes, sources, false);
+        }
+    }
     private final Database db;
     public ContextRepository(Database db) { this.db = db; }
 
@@ -21,10 +25,10 @@ public final class ContextRepository {
         List<Item> result = new ArrayList<>();
         for (UUID id : ids) {
             var rows = db.jdbc().query("""
-                select id,kind,expires_at,depth,content_hash,octet_length(content) as bytes
+                select id,kind,expires_at,depth,content_hash,octet_length(content) as bytes,retired_at is not null as retired
                 from context_items where tenant=? and owner_subject=? and id=?
                 """, (rs, n) -> new Item(id, rs.getString("kind"), rs.getTimestamp("expires_at").toInstant(),
-                    rs.getInt("depth"), rs.getString("content_hash"), rs.getInt("bytes"), dependencies(caller.tenant(), id)),
+                    rs.getInt("depth"), rs.getString("content_hash"), rs.getInt("bytes"), dependencies(caller.tenant(), id), rs.getBoolean("retired")),
                     caller.tenant(), caller.subject(), id);
             if (rows.isEmpty()) throw new Problem(404, "NOT_FOUND");
             result.add(rows.getFirst());
@@ -36,7 +40,7 @@ public final class ContextRepository {
             (rs, n) -> new SourceVersion(rs.getString(1), rs.getLong(2), rs.getLong(3)), tenant, id);
     }
     public String body(String tenant, Item item) {
-        return db.jdbc().queryForObject("select content from context_items where tenant=? and id=? and content_hash=?",
+        return db.jdbc().queryForObject("select content from context_items where tenant=? and id=? and content_hash=? and retired_at is null",
                 String.class, tenant, item.id(), item.hash());
     }
     public ContextHandle insert(Caller caller, String kind, String content, List<UUID> parents,

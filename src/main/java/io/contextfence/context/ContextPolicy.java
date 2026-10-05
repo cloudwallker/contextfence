@@ -30,6 +30,13 @@ public final class ContextPolicy {
         List<Reason> reasons = new ArrayList<>();
         Failure overall = null;
         for (var item : items) {
+            if (item.retired()) {
+                Failure retired = new Failure(410, "CONTEXT_RETIRED", -1);
+                bound.addAll(item.sources());
+                reasons.add(new Reason(item.id(), retired.code()));
+                overall = prefer(overall, retired);
+                continue;
+            }
             Failure failure = now.isBefore(item.expiresAt()) ? null : new Failure(410, "CONTEXT_EXPIRED", 3);
             for (var dependency : item.sources()) {
                 bound.add(dependency);

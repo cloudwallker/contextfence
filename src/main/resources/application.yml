@@ -18,6 +18,7 @@ spring:
     username: ${CONTEXTFENCE_DATABASE_USER:contextfence}
     password: ${CONTEXTFENCE_DATABASE_PASSWORD:}
     hikari:
+      pool-name: contextfence
       maximum-pool-size: 16
       minimum-idle: 2
       connection-timeout: 2000
@@ -34,8 +35,33 @@ spring:
       add-mappings: false
 
 logging:
+  structured:
+    format:
+      console: logstash
   level:
     org.springframework.jdbc.core: OFF
     org.springframework.web: ERROR
     org.springframework.security: WARN
     com.zaxxer.hikari: WARN
+
+contextfence:
+  observability:
+    instance: ${CONTEXTFENCE_INSTANCE:local}
+    version: ${CONTEXTFENCE_VERSION:0.1.0}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus
+  metrics:
+    use-global-registry: false
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      minimum-expected-value:
+        http.server.requests: 1ms
+      maximum-expected-value:
+        http.server.requests: 10s
+      slo:
+        http.server.requests: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,2s,5s

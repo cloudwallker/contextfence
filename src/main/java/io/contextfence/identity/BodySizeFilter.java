@@ -21,10 +21,10 @@ public final class BodySizeFilter extends OncePerRequestFilter {
     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         if (request.getContentLengthLong() > MAX_BYTES) {
-            SecurityResponses.write(response, 413, "REQUEST_TOO_LARGE"); return;
+            SecurityResponses.write(request, response, 413, "REQUEST_TOO_LARGE"); return;
         }
         byte[] body = request.getInputStream().readNBytes(MAX_BYTES + 1);
-        if (body.length > MAX_BYTES) { SecurityResponses.write(response, 413, "REQUEST_TOO_LARGE"); return; }
+        if (body.length > MAX_BYTES) { SecurityResponses.write(request, response, 413, "REQUEST_TOO_LARGE"); return; }
         chain.doFilter(new BufferedRequest(request, body), response);
     }
 
