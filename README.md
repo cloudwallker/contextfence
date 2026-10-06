@@ -1,5 +1,9 @@
 # ContextFence
 
+中文简介：面向 Agent 后端的权限感知上下文服务，提供可操作的本地 Grafana 运维仪表盘；按服务、数据库、缓存与资源分组，显示真实单位、备份阈值和无数据状态。
+
+English summary: Permission-aware context delivery for agent backends with a local Grafana operations dashboard, grouped telemetry, explicit units, backup thresholds and no-data states.
+
 ### Permission-aware context delivery for agent backends
 
 **Keep managed context and its registered derivatives tied to current permissions, source versions, and expiry. Recheck every retrieval, even when another service instance already holds the body in cache.**

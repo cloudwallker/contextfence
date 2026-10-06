@@ -1,8 +1,8 @@
 {
   "uid": "contextfence-local",
-  "title": "ContextFence local SRE",
+  "title": "ContextFence · Local operations",
   "schemaVersion": 41,
-  "version": 1,
+  "version": 2,
   "editable": false,
   "refresh": "5s",
   "time": {
@@ -10,19 +10,49 @@
     "to": "now"
   },
   "tags": [
+    "contextfence",
     "local",
+    "operations",
     "synthetic"
   ],
   "panels": [
     {
-      "id": 1,
-      "title": "Readiness",
-      "type": "stat",
+      "id": 100,
+      "type": "text",
+      "title": "ContextFence · 本地运维 / Local operations",
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 12,
-        "h": 8
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**先看就绪与备份，再检查请求、数据库和资源。** 指标来自 Prometheus；无数据不等于零或健康。\n\n**Start with readiness and backup age.** Then inspect traffic, database waits and resources. No data is not zero or healthy."
+      }
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "01 · 服务与请求 / Service & traffic",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 1,
+      "title": "服务就绪 · Readiness",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 6,
+        "h": 5
       },
       "datasource": {
         "type": "prometheus",
@@ -32,24 +62,136 @@
         {
           "refId": "A",
           "expr": "contextfence_ready",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
+          "legendFormat": "{{instance}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "min": 0,
+          "max": 1,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "未就绪 / Not ready",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "就绪 / Ready",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
         "overrides": []
       },
-      "options": {}
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "description": "0=未就绪，1=已就绪。没有数据不代表服务健康；检查 Prometheus scrape 与启动门禁。"
+    },
+    {
+      "id": 12,
+      "title": "备份新鲜度 · Snapshot age",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 4,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time()-contextfence_backup_snapshot_timestamp_seconds",
+          "legendFormat": "Snapshot age"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 4200
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "description": "距最近成功快照的秒数。4200 秒阈值沿用 BackupExpired 的 70 分钟规则；无数据也需检查。"
     },
     {
       "id": 2,
-      "title": "Requests per second",
+      "title": "请求速率 · Requests/s",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 4,
         "w": 12,
-        "h": 8
+        "h": 5
       },
       "datasource": {
         "type": "prometheus",
@@ -59,22 +201,51 @@
         {
           "refId": "A",
           "expr": "sum by(instance,reason) (rate(http_server_requests_seconds_count{job=\"contextfence\",uri=~\"/v1/.*\"}[1m]))",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
+          "legendFormat": "{{instance}} · {{reason}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "unit": "suffix:requests/s",
+          "decimals": 2,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
         "overrides": []
       },
-      "options": {}
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "业务 /v1 请求的每秒速率，按实例与原因分组；保留原始 1 分钟 rate 窗口。"
     },
     {
       "id": 3,
-      "title": "p99 seconds",
+      "title": "尾部延迟 · p99",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 8,
+        "y": 9,
         "w": 12,
         "h": 8
       },
@@ -86,265 +257,51 @@
         {
           "refId": "A",
           "expr": "histogram_quantile(0.99,sum by(le,instance)(rate(http_server_requests_seconds_bucket{job=\"contextfence\",uri=~\"/v1/.*\"}[2m])))",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
+          "legendFormat": "{{instance}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
         "overrides": []
       },
-      "options": {}
-    },
-    {
-      "id": 4,
-      "title": "Database pool pending",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 12,
-        "y": 8,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "hikaricp_connections_pending{job=\"contextfence\"}",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
       },
-      "options": {}
-    },
-    {
-      "id": 5,
-      "title": "Database lock waiters",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 16,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "contextfence_pg_lock_waiters",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {}
-    },
-    {
-      "id": 6,
-      "title": "Cache hit / miss",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 12,
-        "y": 16,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by(instance,result)(rate(cache_gets_total{cache=\"context-body\"}[1m]))",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {}
-    },
-    {
-      "id": 7,
-      "title": "JVM heap bytes",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 24,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by(instance)(jvm_memory_used_bytes{area=\"heap\"})",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {}
-    },
-    {
-      "id": 8,
-      "title": "Host CPU usage",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 12,
-        "y": 24,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "1-avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m]))",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {}
-    },
-    {
-      "id": 9,
-      "title": "Host memory available bytes",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 32,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "node_memory_MemAvailable_bytes",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {}
-    },
-    {
-      "id": 10,
-      "title": "Host filesystem available bytes",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 12,
-        "y": 32,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"}",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {}
-    },
-    {
-      "id": 11,
-      "title": "Disk I/O bytes per second",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 40,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(node_disk_read_bytes_total[1m])+rate(node_disk_written_bytes_total[1m]))",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {}
-    },
-    {
-      "id": 12,
-      "title": "Backup snapshot age seconds",
-      "type": "stat",
-      "gridPos": {
-        "x": 12,
-        "y": 40,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "time()-contextfence_backup_snapshot_timestamp_seconds",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {}
+      "description": "业务请求的 p99，按实例显示。容量告警采用冻结的实验阈值，此图不引入固定 SLO。"
     },
     {
       "id": 13,
-      "title": "Application CPU",
+      "title": "应用 CPU · Usage",
       "type": "timeseries",
       "gridPos": {
-        "x": 0,
-        "y": 48,
+        "x": 12,
+        "y": 9,
         "w": 12,
         "h": 8
       },
@@ -356,23 +313,205 @@
         {
           "refId": "A",
           "expr": "process_cpu_usage{job=\"contextfence\"}",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
+          "legendFormat": "{{instance}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
         "overrides": []
       },
-      "options": {}
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "按实例显示进程 CPU 的 0–1 指标；以百分比格式展示，查询不变。"
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "02 · 数据库等待 / Database waits",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 4,
+      "title": "连接池排队 · Pool waiters",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "hikaricp_connections_pending{job=\"contextfence\"}",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "连接池等待人数；大于零用橙色提示。现有告警要求持续 30 秒，颜色本身不是告警。"
+    },
+    {
+      "id": 5,
+      "title": "数据库锁等待 · Lock waiters",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 8,
+        "y": 18,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "contextfence_pg_lock_waiters",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "PostgreSQL 锁等待数量。结合连接池排队与获取耗时检查阻塞来源。"
     },
     {
       "id": 14,
-      "title": "Connection acquisition seconds",
+      "title": "获取连接耗时 · Acquisition",
       "type": "timeseries",
       "gridPos": {
-        "x": 12,
-        "y": 48,
-        "w": 12,
+        "x": 16,
+        "y": 18,
+        "w": 8,
         "h": 8
       },
       "datasource": {
@@ -383,14 +522,408 @@
         {
           "refId": "A",
           "expr": "rate(hikaricp_connections_acquire_seconds_sum[1m])/clamp_min(rate(hikaricp_connections_acquire_seconds_count[1m]),1)",
-          "legendFormat": "{{instance}} {{reason}} {{result}}"
+          "legendFormat": "{{instance}}"
         }
       ],
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
         "overrides": []
       },
-      "options": {}
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "原查询的平均获取连接耗时，保持原 rate 与 clamp_min 计算；不是 p99。"
+    },
+    {
+      "id": 103,
+      "type": "row",
+      "title": "03 · 缓存与 JVM / Cache & JVM",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 6,
+      "title": "缓存访问 · Cache hit / miss",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(instance,result)(rate(cache_gets_total{cache=\"context-body\"}[1m]))",
+          "legendFormat": "{{instance}} · {{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix:operations/s",
+          "decimals": 2,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "正文缓存命中/未命中的每秒速率。保留 result 标签，不把速率误读为命中率。"
+    },
+    {
+      "id": 7,
+      "title": "JVM 堆用量 · Heap",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 27,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(instance)(jvm_memory_used_bytes{area=\"heap\"})",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "按实例汇总的 JVM heap 已使用字节；不是主机内存，也不是堆使用比例。"
+    },
+    {
+      "id": 104,
+      "type": "row",
+      "title": "04 · 主机资源 / Host resources",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 8,
+      "title": "主机 CPU · Usage",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1-avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m]))",
+          "legendFormat": "Host CPU"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "原值 0–1，以百分比显示。原查询跨 CPU 的平均空闲率转为使用率。"
+    },
+    {
+      "id": 9,
+      "title": "可用内存 · Available",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 8,
+        "y": 36,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "node_memory_MemAvailable_bytes",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "主机可用内存字节，包含系统可回收部分；保持原 node-exporter 指标语义。"
+    },
+    {
+      "id": 10,
+      "title": "文件系统可用空间 · Available",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 16,
+        "y": 36,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"}",
+          "legendFormat": "{{mountpoint}} · {{device}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "按文件系统显示可用字节。现有低空间告警使用可用比例 <20%，此图不伪造绝对字节阈值。"
+    },
+    {
+      "id": 11,
+      "title": "磁盘吞吐 · Read + write",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(node_disk_read_bytes_total[1m])+rate(node_disk_written_bytes_total[1m]))",
+          "legendFormat": "Disk I/O"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "binBps",
+          "decimals": 1,
+          "noValue": "无数据 / No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "原查询汇总的每秒读取与写入字节；不表示单设备吞吐或 IOPS。"
     }
-  ]
+  ],
+  "description": "就绪、流量、数据库、缓存、资源与备份；14 个原有指标查询保持不变。 / Local service operations with unchanged metric queries."
 }
