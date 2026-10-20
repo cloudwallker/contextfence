@@ -79,6 +79,8 @@ Run these commands from the repository root with `python3` on Linux/WSL (`python
 
 Deployment records the actual image IDs, drains and verifies instances in turn, and restores the previous images on failure when safety checks pass. Database schema is not rolled back with an image. Backup uses a live exported PostgreSQL snapshot and verifies the custom archive before publishing it. Recovery uses a new database volume, current identities, and a complete independent source ledger; the source volume is retained. These scripts and protocols are local operating tools, not evidence that every deployment, recovery, or capacity acceptance has passed.
 
+The Alertmanager receiver validates the webhook object, its `alerts` array, and the alert/label objects it retains. Invalid shapes return HTTP 400 without creating a log record; valid webhooks return HTTP 202 after the sanitized record is stored.
+
 ## Build and Test
 
 For a native build, install JDK 21 and Maven 3.6.3+. By default, integration tests start PostgreSQL with Testcontainers and require a working Docker engine.

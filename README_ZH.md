@@ -79,6 +79,8 @@ python3 scripts/stop.py
 
 发布记录实际镜像 ID，逐个排空、更新和验收实例；失败时经安全检查恢复上一镜像。数据库 schema 不随镜像回滚。备份保持 PostgreSQL 导出快照事务存活，校验 custom archive 后才发布。恢复使用新数据库卷、当前身份配置和完整独立来源账本，并保留故障源卷。脚本与方法是本地操作工具，其存在不代表发布、恢复和容量验收全部通过。
 
+Alertmanager 收集端校验 webhook 顶层对象、`alerts` 数组及保留的告警和标签对象。结构错误时返回 HTTP 400，不写入日志记录；合法 webhook 在清理后的记录落盘后返回 HTTP 202。
+
 ## 构建与测试
 
 本机构建需要 JDK 21 与 Maven 3.6.3+。默认集成测试通过 Testcontainers 启动 PostgreSQL，需要正常工作的 Docker 引擎。
