@@ -20,12 +20,18 @@ def valid_utc_timestamp(value):
 
 
 def sanitize(document):
+    if not isinstance(document,dict): raise ValueError('Invalid alert document')
     status = document.get('status')
     if status not in ('firing','resolved'): raise ValueError('Invalid alert status')
+    incoming = document.get('alerts',[])
+    if not isinstance(incoming,list): raise ValueError('Invalid alert list')
     alerts = []
-    for alert in document.get('alerts',[])[:100]:
+    for alert in incoming[:100]:
+        if not isinstance(alert,dict): raise ValueError('Invalid alert')
+        incoming_labels = alert.get('labels',{})
+        if not isinstance(incoming_labels,dict): raise ValueError('Invalid alert labels')
         labels = {}
-        for key,value in alert.get('labels',{}).items():
+        for key,value in incoming_labels.items():
             if key in LABELS and isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9_.:/-]{1,160}',value): labels[key] = value
         bounded={'status':alert.get('status') if alert.get('status') in ('firing','resolved') else status,'labels':labels}
         fingerprint=alert.get('fingerprint')
